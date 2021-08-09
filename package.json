@@ -1,0 +1,29 @@
+{
+  "name": "kokorugs-customer-photos",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "sh scripts/build.sh",
+    "start": "node scripts/start.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rugapp/kokorugs-customer-photos.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rugapp/kokorugs-customer-photos/issues"
+  },
+  "homepage": "https://github.com/rugapp/kokorugs-customer-photos#readme",
+  "dependencies": {
+    "chokidar": "*",
+    "esbuild": "*",
+    "rescript": "*",
+    "@rescript/react": "*",
+    "react": "*",
+    "react-dom": "*"
+  }
+}
