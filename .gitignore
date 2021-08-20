@@ -12,6 +12,9 @@ firebase-debug.*.log*
 .bsb.lock
 lib/
 
+# Build
+public
+
 # Firebase cache
 .firebase/
 

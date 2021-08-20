@@ -11,5 +11,5 @@ function build() {
 }
 
 function serve() {
-  process.spawn("npx", ["http-server", "-c-1", "public"], { stdio: "inherit" });
+  process.spawn("firebase", ["emulators:start"], { stdio: "inherit" });
 }

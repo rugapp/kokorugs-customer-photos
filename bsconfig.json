@@ -14,5 +14,11 @@
   ],
   "suffix": ".bs.js",
   "reason": { "react-jsx": 3 },
-  "bs-dependencies": ["@rescript/react"]
+  "bs-dependencies": [
+    "@rescript/react",
+    "@ryyppy/rescript-promise",
+    "bs-css",
+    "bs-css-emotion"
+  ],
+  "ppx-flags": ["@davesnx/styled-ppx/ppx"]
 }

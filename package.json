@@ -19,11 +19,16 @@
   },
   "homepage": "https://github.com/rugapp/kokorugs-customer-photos#readme",
   "dependencies": {
+    "@rescript/react": "*",
+    "@ryyppy/rescript-promise": "*",
     "chokidar": "*",
     "esbuild": "*",
-    "rescript": "*",
-    "@rescript/react": "*",
+    "firebase": "^9.0.0-beta.7",
     "react": "*",
-    "react-dom": "*"
+    "react-dom": "*",
+    "rescript": "*",
+    "@davesnx/styled-ppx": "*",
+    "bs-css": "*",
+    "bs-css-emotion": "*"
   }
 }
