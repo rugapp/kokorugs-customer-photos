@@ -7,10 +7,17 @@ module ResultsList = %styled.ul(`
     width: 80%;
     box-sizing: border-box;
 
+    &:last-of-type {
+
+      a {
+        border: none;
+      }
+    }
+
     a {
       display: block;
       padding: 0.5rem;
-      border-bottom: 1px solid white;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.3);
       background-color: rgba(0, 0, 0, 0.05);
       text-decoration: none;
       color: blue;
@@ -33,7 +40,7 @@ let make = () => {
   React.useEffect1(() => {
     open Firebase.Firestore
 
-    let unsubscribe = onQuerySnapshot(query(collection(db, "customers")), (
+    let unsubscribe = onQuerySnapshot(query(collection(db, "customers"), []), (
       querySnapshot: iterable<customerData>,
     ) => {
       let customers = []

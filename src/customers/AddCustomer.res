@@ -169,6 +169,8 @@ let make = (~name) => {
       <strong> {React.string("Zip Code")} </strong>
       <input type_="text" name="zip" onChange=handleChange value=state.address.zip required=true />
     </Styled.Form.Label>
-    <Styled.Form.SubmitButton> {React.string("Submit")} </Styled.Form.SubmitButton>
+    <Styled.Form.Button variation=Styled.Form.Primary>
+      {React.string("Submit")}
+    </Styled.Form.Button>
   </form>
 }

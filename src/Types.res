@@ -11,4 +11,4 @@ type customer = {
   address: address,
 }
 
-type invoice = {id: string, photos: array<string>}
+type invoice = {id: string, photos: array<string>, date: string}

@@ -1,16 +1,10 @@
-module Header = %styled.header(`
-  p {
-    margin-top: 0.5rem;
-  }
-`)
-
 @react.component
 let make = (~user) => {
   let (customer, setCustomer) = React.useState(() => None)
   let url = RescriptReactRouter.useUrl()
 
   <Context.Customer.Provider value=(customer, setCustomer)>
-    <Header>
+    <header>
       <h1> {React.string("Customer Photos")} </h1>
       <Styled.Nav>
         <Link isNavLink=true href="/customers/search"> {React.string("Search Customers")} </Link>
@@ -20,8 +14,10 @@ let make = (~user) => {
           {React.string("Sign Out")}
         </button>
       </Styled.Nav>
-      <p> <em> {React.string(`Logged in as ${user["displayName"]}`)} </em> </p>
-    </Header>
+      <p className=%cx("margin-top: 0.5rem;")>
+        <em> {React.string(`Logged in as ${user["displayName"]}`)} </em>
+      </p>
+    </header>
     <hr />
     {switch url.path {
     | list{} => <Redirect to_="/customers/search" />

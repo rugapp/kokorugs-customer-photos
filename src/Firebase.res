@@ -19,8 +19,9 @@ module Firestore = {
   type collection
   type doc
   type query
-  type where
   type iterable<'a>
+
+  type clause
 
   type customerData = {id: string, data: (. unit) => Types.customer}
   type invoiceData = {id: string, data: (. unit) => Types.invoice}
@@ -33,7 +34,10 @@ module Firestore = {
   @module("firebase/firestore") external collection: (db, string) => collection = "collection"
   @module("firebase/firestore") external addDoc: (collection, 'a) => Promise.t<'b> = "addDoc"
   @module("firebase/firestore") @variadic external doc: (db, array<string>) => doc = "doc"
-  @module("firebase/firestore") external query: collection => query = "query"
+  @module("firebase/firestore") @variadic
+  external query: (collection, array<clause>) => query = "query"
+  @module("firebase/firestore") external where: (string, string, string) => clause = "where"
+  @module("firebase/firestore") external orderBy: (string, string) => clause = "orderBy"
   @module("firebase/firestore") external onSnapshot: (doc, 'a => unit) => 'b = "onSnapshot"
   @module("firebase/firestore")
   external onQuerySnapshot: (query, iterable<'a> => unit) => 'b = "onSnapshot"
