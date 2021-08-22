@@ -34,24 +34,8 @@ let stringifyCustomer = (customer: Types.customer) =>
 
 @react.component
 let make = () => {
-  let (customers, setCustomers) = React.useState(() => [])
+  let (customers, _setCustomers) = React.useContext(Context.Customers.context)
   let (searchText, setSearchText) = React.useState(() => "")
-
-  React.useEffect1(() => {
-    open Firebase.Firestore
-
-    let unsubscribe = onQuerySnapshot(query(collection(db, "customers"), []), (
-      querySnapshot: iterable<customerData>,
-    ) => {
-      let customers = []
-      querySnapshot->forEach(doc => {
-        customers->Js.Array2.push((doc.id, doc.data(.)))
-      })
-      setCustomers(_ => customers)
-    })
-
-    Some(unsubscribe)
-  }, [])
 
   <>
     <Styled.Form.Label>

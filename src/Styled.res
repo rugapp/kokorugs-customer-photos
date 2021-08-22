@@ -74,3 +74,44 @@ module Nav = %styled.nav(`
     }
   }
 `)
+
+module Invoice = %styled.div(`
+  margin-top: 2rem;
+
+  header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  section {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+
+    a {
+      flex: 0 0 49%;
+      margin-bottom: 2rem;
+      text-align: center;
+      text-decoration: none;
+
+      img {
+        width: 100%;
+
+        &.duplicate {
+          opacity: 0.3;
+        }
+
+        &.duplicate + .error {
+          display: block;
+        }
+      }
+
+      .error {
+        display: none;
+        color: black;
+      }
+    } 
+  }
+`)

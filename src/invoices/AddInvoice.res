@@ -1,7 +1,9 @@
 @val external location: {..} = "location"
 
+let duplicateTag = "#duplicate"
+
 @react.component
-let make = (~customerId) => {
+let make = (~customerRef) => {
   let initialState: Types.invoice = {
     id: "",
     photos: [],
@@ -9,7 +11,7 @@ let make = (~customerId) => {
   }
 
   let (invoice, setInvoice) = React.useState(() => initialState)
-  let customer = Hooks.useCustomer(~customerId)
+  let customer = Hooks.useCustomer(~customerRef)
   let fileInputRef = React.useRef(Js.Nullable.null)
 
   let handleChange = event => {
@@ -23,47 +25,71 @@ let make = (~customerId) => {
     )
   }
 
-  Js.log(invoice)
-
   switch customer {
   | None => <p> {React.string("Invalid customer ID.")} </p>
-  | Some(customer) => <>
+  | Some((_customerRef, customer)) => <>
       <h2> {React.string(`Customer: ${customer.name}`)} </h2>
-      <CustomerNav customerId />
+      <CustomerNav customerRef />
       <form
         autoComplete="off"
         onSubmit={event => {
           open Firebase.Firestore
           ReactEvent.Form.preventDefault(event)
-          addDoc(
-            collection(db, `customers/${customerId}/invoices`),
-            {...invoice, date: Js.Date.make()->Js.Date.toISOString},
-          )
-          ->Promise.then(response => {
-            location["href"] = `/customers/${customerId}/view`
-            Js.log(response)
-            Promise.resolve()
-          })
-          ->Promise.catch(error => {
-            Js.log(error)
-            %raw("alert('Permission denied.')")->ignore
-            Promise.resolve()
-          })
-          ->ignore
+
+          let photos =
+            invoice.photos->Js.Array2.filter(url => !(url->Js.String2.includes(duplicateTag)))
+
+          if photos->Js.Array2.length === 0 {
+            %raw(`alert("Invoices require photos.")`)
+          } else {
+            addDoc(
+              collection(db, `customers/${customerRef}/invoices`),
+              (
+                {
+                  id: invoice.id->Js.String2.toUpperCase,
+                  date: Js.Date.make()->Js.Date.toISOString,
+                  photos: photos,
+                }: Types.invoice
+              ),
+            )
+            ->Promise.then(_response => {
+              location["href"] = `/customers/${customerRef}/view`
+              Promise.resolve()
+            })
+            ->Promise.catch(error => {
+              Js.log(error)
+              %raw("alert('Permission denied.')")->ignore
+              Promise.resolve()
+            })
+            ->ignore
+          }
         }}>
         <Styled.Form.Label>
           <strong> {React.string("Invoice Number")} </strong>
           <input type_="text" name="id" onChange=handleChange value=invoice.id required=true />
         </Styled.Form.Label>
-        {if Js.Array2.length(invoice.photos) > 0 {
-          invoice.photos
-          ->Js.Array2.map(url => {
-            <img src=url />
-          })
-          ->React.array
-        } else {
-          <p> {React.string("No photos added.")} </p>
-        }}
+        <Styled.Invoice>
+          <section>
+            {invoice.photos
+            ->Js.Array2.map(url => {
+              <a href=url target="_blank">
+                <img
+                  className={url->Js.String2.includes(duplicateTag) ? "duplicate" : ""}
+                  src=url
+                  key=url
+                />
+                <p className="error">
+                  <em>
+                    {React.string(
+                      "This image has already been uploaded before and will not be included on this invoice.",
+                    )}
+                  </em>
+                </p>
+              </a>
+            })
+            ->React.array}
+          </section>
+        </Styled.Invoice>
         <Styled.Form.Button
           variation=Styled.Form.Secondary
           onClick={event => {
@@ -82,25 +108,37 @@ let make = (~customerId) => {
           multiple=true
           onChange={event => {
             open Firebase.Storage
-            open Promise
 
             ReactEvent.Form.target(event)["files"]
             ->Js.Array2.from
             ->Js.Array2.map(file => {
-              storageRef(storage, [Utils.uuid()])->uploadBytes(file)
+              file
+              ->Utils.resizeAndHashImageFromFile
+              ->Promise.then(((blob, hash)) => {
+                let ref = storageRef(storage, [hash])
+
+                // prevent the same file from being uploaded twice
+                getDownloadURL(ref)
+                ->Promise.then(url => Promise.resolve(`${url}${duplicateTag}`))
+                ->Promise.catch(_error => {
+                  ref
+                  ->uploadBytes(blob)
+                  ->Promise.then(snapshot =>
+                    getDownloadURL(
+                      storageRef(storage, [snapshot["metadata"]["fullPath"]]),
+                    )->Promise.then(Promise.resolve)
+                  )
+                })
+              })
             })
-            ->all
-            ->then(snapshots =>
-              snapshots
-              ->Js.Array2.map(snapshot =>
-                getDownloadURL(storageRef(storage, [snapshot["metadata"]["fullPath"]]))
-              )
-              ->all
+            ->Promise.all
+            ->Promise.thenResolve(urls =>
+              setInvoice(invoice => {
+                ...invoice,
+                photos: invoice.photos->Js.Array2.concat(urls),
+              })
             )
-            ->thenResolve(urls =>
-              setInvoice(invoice => {...invoice, photos: invoice.photos->Js.Array2.concat(urls)})
-            )
-            ->finally(() =>
+            ->Promise.finally(() =>
               switch fileInputRef.current->Js.Nullable.toOption {
               | None => ()
               | Some(node) => ReactDOM.domElementToObj(node)["value"] = ""

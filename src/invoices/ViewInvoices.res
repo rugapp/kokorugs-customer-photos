@@ -1,42 +1,21 @@
-module Invoice = %styled.div(`
-  margin-top: 2rem;
-
-  header {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
-
-  section {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-
-    a {
-      flex: 0 0 49%;
-      margin-bottom: 2rem;
-
-      img {
-        width: 100%;
-      }
-    } 
-  }
-`)
-
 @react.component
-let make = (~customerId) => {
+let make = (~customerRef) => {
   let (invoices, setInvoices) = React.useState(() => [])
-  let customer = Hooks.useCustomer(~customerId)
+  let customer = Hooks.useCustomer(~customerRef)
 
   React.useEffect1(() => {
     open Firebase.Firestore
 
     let unsubscribe = onQuerySnapshot(
-      query(collection(db, `customers/${customerId}/invoices`), [orderBy("date", "desc")]),
-      (querySnapshot: iterable<invoiceData>) => {
+      query(collection(db, `customers/${customerRef}/invoices`), [orderBy("date", "desc")]),
+      (querySnapshot: iterable<invoiceData<'a>>) => {
         let invoices = []
-        querySnapshot->forEach(doc => invoices->Js.Array2.push(doc.data(.)))
+        querySnapshot->forEach(doc => {
+          switch doc.ref["path"]->Invoice.getRefsFromPath {
+          | None => ()
+          | Some((_, invoiceRef)) => invoices->Js.Array2.push((invoiceRef, doc.data(.)))->ignore
+          }
+        })
         setInvoices(_ => invoices)
       },
     )
@@ -44,17 +23,15 @@ let make = (~customerId) => {
     Some(unsubscribe)
   }, [])
 
-  Js.log(invoices)
-
   switch customer {
   | None => <p> {React.string("Invalid customer ID.")} </p>
-  | Some(customer) => <>
+  | Some((_customerRef, customer)) => <>
       <h2> {React.string(`Customer: ${customer.name}`)} </h2>
-      <CustomerNav customerId />
+      <CustomerNav customerRef />
       {if invoices->Js.Array2.length > 0 {
         invoices
-        ->Js.Array2.map(invoice => <>
-          <Invoice>
+        ->Js.Array2.map(((ref, invoice)) => <>
+          <Styled.Invoice id=ref>
             <header>
               <h2> {React.string(invoice.id)} </h2>
               <h3>
@@ -68,7 +45,7 @@ let make = (~customerId) => {
               })
               ->React.array}
             </section>
-          </Invoice>
+          </Styled.Invoice>
           <hr />
         </>)
         ->React.array

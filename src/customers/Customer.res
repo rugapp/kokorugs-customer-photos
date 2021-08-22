@@ -6,8 +6,10 @@ external removeListener: {..} => unit = "removeListener"
 @send external focus: Dom.element => unit = "focus"
 @val external location: {..} = "location"
 
+type mode = Create | Edit(string)
+
 @react.component
-let make = (~name) => {
+let make = (~name="", ~mode=Create) => {
   let initialState: Types.customer = {
     name: name->Js.Global.decodeURI,
     address: {
@@ -20,7 +22,23 @@ let make = (~name) => {
   }
 
   let inputRef = React.useRef(Js.Nullable.null)
+  let (customers, _setCustomers) = React.useContext(Context.Customers.context)
   let (state, setState) = React.useState(() => initialState)
+
+  React.useEffect1(() => {
+    switch mode {
+    | Create => ()
+    | Edit(customerRef) =>
+      setState(state =>
+        switch customers->Js.Array2.find(((ref, _)) => customerRef === ref) {
+        | None => state
+        | Some((_ref, customer)) => customer
+        }
+      )
+    }
+
+    None
+  }, [customers])
 
   React.useEffect1(() => {
     let listener = switch Js.Nullable.toOption(inputRef.current) {
@@ -117,60 +135,84 @@ let make = (~name) => {
     )
   }
 
-  <form
-    autoComplete="off"
-    onSubmit={event => {
-      open Firebase.Firestore
-      ReactEvent.Form.preventDefault(event)
-      addDoc(collection(db, "customers"), state)
-      ->Promise.then(response => {
-        location["href"] = `/customers/${response["id"]}/view`
-        Promise.resolve()
-      })
-      ->Promise.catch(error => {
-        Js.log(error)
-        %raw("alert('Permission denied.')")->ignore
-        Promise.resolve()
-      })
-      ->ignore
-    }}>
-    <Styled.Form.Label>
-      <strong> {React.string("Name")} </strong>
-      <input type_="text" name="name" onChange=handleChange value=state.name required=true />
-    </Styled.Form.Label>
-    <Styled.Form.Label>
-      <strong> {React.string("Address")} </strong>
-      <input
-        type_="text"
-        name="street"
-        onChange=handleChange
-        value=state.address.street
-        required=true
-        ref={ReactDOM.Ref.domRef(inputRef)}
-      />
-    </Styled.Form.Label>
-    <Styled.Form.Label>
-      <strong> {React.string("Suite")} </strong>
-      <input type_="text" name="suite" onChange=handleChange value=state.address.suite />
-    </Styled.Form.Label>
-    <Styled.Form.Label>
-      <strong> {React.string("City")} </strong>
-      <input
-        type_="text" name="city" onChange=handleChange value=state.address.city required=true
-      />
-    </Styled.Form.Label>
-    <Styled.Form.Label>
-      <strong> {React.string("State")} </strong>
-      <input
-        type_="text" name="state" onChange=handleChange value=state.address.state required=true
-      />
-    </Styled.Form.Label>
-    <Styled.Form.Label>
-      <strong> {React.string("Zip Code")} </strong>
-      <input type_="text" name="zip" onChange=handleChange value=state.address.zip required=true />
-    </Styled.Form.Label>
-    <Styled.Form.Button variation=Styled.Form.Primary>
-      {React.string("Submit")}
-    </Styled.Form.Button>
-  </form>
+  <>
+    {switch mode {
+    | Create => React.null
+    | Edit(customerRef) => <>
+        <h2> {React.string(`Customer: ${state.name}`)} </h2> <CustomerNav customerRef />
+      </>
+    }}
+    <form
+      autoComplete="off"
+      onSubmit={event => {
+        open Firebase.Firestore
+        ReactEvent.Form.preventDefault(event)
+
+        switch mode {
+        | Create =>
+          addDoc(collection(db, "customers"), state)
+          ->Promise.then(response => {
+            location["href"] = `/customers/${response["id"]}/view`
+            Promise.resolve()
+          })
+          ->Promise.catch(error => {
+            Js.log(error)
+            %raw("alert('Permission denied.')")->ignore
+            Promise.resolve()
+          })
+        | Edit(customerRef) =>
+          setDoc(doc(db, ["customers", customerRef]), state)
+          ->Promise.then(_response => {
+            location["href"] = `/customers/${customerRef}/view`
+            Promise.resolve()
+          })
+          ->Promise.catch(error => {
+            Js.log(error)
+            %raw("alert('Permission denied.')")->ignore
+            Promise.resolve()
+          })
+        }->ignore
+      }}>
+      <Styled.Form.Label>
+        <strong> {React.string("Name")} </strong>
+        <input type_="text" name="name" onChange=handleChange value=state.name required=true />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("Address")} </strong>
+        <input
+          type_="text"
+          name="street"
+          onChange=handleChange
+          value=state.address.street
+          required=true
+          ref={ReactDOM.Ref.domRef(inputRef)}
+        />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("Suite")} </strong>
+        <input type_="text" name="suite" onChange=handleChange value=state.address.suite />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("City")} </strong>
+        <input
+          type_="text" name="city" onChange=handleChange value=state.address.city required=true
+        />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("State")} </strong>
+        <input
+          type_="text" name="state" onChange=handleChange value=state.address.state required=true
+        />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("Zip Code")} </strong>
+        <input
+          type_="text" name="zip" onChange=handleChange value=state.address.zip required=true
+        />
+      </Styled.Form.Label>
+      <Styled.Form.Button variation=Styled.Form.Primary>
+        {React.string("Submit")}
+      </Styled.Form.Button>
+    </form>
+  </>
 }

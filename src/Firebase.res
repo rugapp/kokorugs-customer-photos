@@ -23,8 +23,8 @@ module Firestore = {
 
   type clause
 
-  type customerData = {id: string, data: (. unit) => Types.customer}
-  type invoiceData = {id: string, data: (. unit) => Types.invoice}
+  type customerData<'a> = {id: string, ref: 'a, data: (. unit) => Types.customer}
+  type invoiceData<'a> = {id: string, ref: 'a, data: (. unit) => Types.invoice}
 
   @send external forEach: (iterable<'a>, 'a => 'b) => unit = "forEach"
 
@@ -32,7 +32,10 @@ module Firestore = {
   @module("firebase/firestore")
   external connectFirestoreEmulator: (db, string, int) => unit = "connectFirestoreEmulator"
   @module("firebase/firestore") external collection: (db, string) => collection = "collection"
+  @module("firebase/firestore")
+  external collectionGroup: (db, string) => collection = "collectionGroup"
   @module("firebase/firestore") external addDoc: (collection, 'a) => Promise.t<'b> = "addDoc"
+  @module("firebase/firestore") external setDoc: (doc, 'a) => Promise.t<'b> = "setDoc"
   @module("firebase/firestore") @variadic external doc: (db, array<string>) => doc = "doc"
   @module("firebase/firestore") @variadic
   external query: (collection, array<clause>) => query = "query"
@@ -41,6 +44,7 @@ module Firestore = {
   @module("firebase/firestore") external onSnapshot: (doc, 'a => unit) => 'b = "onSnapshot"
   @module("firebase/firestore")
   external onQuerySnapshot: (query, iterable<'a> => unit) => 'b = "onSnapshot"
+  @module("firebase/firestore") external getDocs: query => Promise.t<iterable<'a>> = "getDocs"
 
   let db = getFirestore()
   if origin->Js.String2.includes("localhost") {
