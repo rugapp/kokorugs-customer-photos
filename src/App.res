@@ -1,7 +1,7 @@
 @react.component
 let make = (~user) => {
   let (customers, setCustomers) = React.useState(() => [])
-  let (customer, setCustomer) = React.useState(() => None)
+  let (snackbar, setSnackbar) = React.useState((): option<React.element> => None)
   let url = RescriptReactRouter.useUrl()
 
   React.useEffect1(() => {
@@ -20,8 +20,18 @@ let make = (~user) => {
     Some(unsubscribe)
   }, [])
 
+  React.useEffect1(() => {
+    let timeoutId = Js.Global.setTimeout(() => setSnackbar(_ => None), 8000)
+
+    Some(
+      () => {
+        Js.Global.clearTimeout(timeoutId)
+      },
+    )
+  }, [snackbar])
+
   <Context.Customers.Provider value=(customers, setCustomers)>
-    <Context.Customer.Provider value=(customer, setCustomer)>
+    <Context.Snackbar.Provider value={setSnackbar}>
       <header>
         <h1> {React.string("Customer Photos")} </h1>
         <Styled.Nav>
@@ -50,6 +60,12 @@ let make = (~user) => {
       | list{"recent-activity"} => <RecentActivity />
       | _ => <Redirect to_="/" />
       }}
-    </Context.Customer.Provider>
+      <Snackbar isOpen={snackbar->Belt.Option.isSome}>
+        {switch snackbar {
+        | None => React.null
+        | Some(snackbar) => snackbar
+        }}
+      </Snackbar>
+    </Context.Snackbar.Provider>
   </Context.Customers.Provider>
 }

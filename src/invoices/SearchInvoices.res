@@ -1,6 +1,7 @@
 @react.component
 let make = () => {
   let (invoiceId, setInvoiceId) = React.useState(() => "")
+  let setSnackbar = React.useContext(Context.Snackbar.context)
 
   <form
     onSubmit={event => {
@@ -14,6 +15,15 @@ let make = () => {
           Promise.resolve()
         }
       )
+      ->Promise.catch(_error => {
+        setSnackbar(_ => Some(<>
+          <p> {React.string("Invoice number does not exist")} </p>
+          <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+            {React.string("Dismiss")}
+          </button>
+        </>))
+        Promise.resolve()
+      })
       ->ignore
     }}>
     <Styled.Form.Label>

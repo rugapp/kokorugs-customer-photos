@@ -1,9 +1,9 @@
-module Customer = {
-  let customer: option<(string, Types.customer)> = None
-  let setCustomer: (
-    option<(string, Types.customer)> => option<(string, Types.customer)>
+module Customers = {
+  let customers: array<(string, Types.customer)> = []
+  let setCustomers: (
+    array<(string, Types.customer)> => array<(string, Types.customer)>
   ) => unit = _ => ()
-  let context = React.createContext((customer, setCustomer))
+  let context = React.createContext((customers, setCustomers))
 
   module Provider = {
     let provider = React.Context.provider(context)
@@ -15,12 +15,9 @@ module Customer = {
   }
 }
 
-module Customers = {
-  let customers: array<(string, Types.customer)> = []
-  let setCustomers: (
-    array<(string, Types.customer)> => array<(string, Types.customer)>
-  ) => unit = _ => ()
-  let context = React.createContext((customers, setCustomers))
+module Snackbar = {
+  let setSnackbar: (option<React.element> => option<React.element>) => unit = _ => ()
+  let context = React.createContext(setSnackbar)
 
   module Provider = {
     let provider = React.Context.provider(context)

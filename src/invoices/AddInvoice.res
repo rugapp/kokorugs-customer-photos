@@ -11,7 +11,9 @@ let make = (~customerRef) => {
   }
 
   let (invoice, setInvoice) = React.useState(() => initialState)
-  let customer = Hooks.useCustomer(~customerRef)
+  let (customers, _) = React.useContext(Context.Customers.context)
+  let setSnackbar = React.useContext(Context.Snackbar.context)
+  let customer = customers->Js.Array2.find(((ref, _)) => customerRef === ref)
   let fileInputRef = React.useRef(Js.Nullable.null)
 
   let handleChange = event => {
@@ -40,7 +42,12 @@ let make = (~customerRef) => {
             invoice.photos->Js.Array2.filter(url => !(url->Js.String2.includes(duplicateTag)))
 
           if photos->Js.Array2.length === 0 {
-            %raw(`alert("Invoices require photos.")`)
+            setSnackbar(_ => Some(<>
+              <p> {React.string("Invoices require photos")} </p>
+              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                {React.string("Dismiss")}
+              </button>
+            </>))
           } else {
             addDoc(
               collection(db, `customers/${customerRef}/invoices`),
@@ -58,7 +65,12 @@ let make = (~customerRef) => {
             })
             ->Promise.catch(error => {
               Js.log(error)
-              %raw("alert('Permission denied.')")->ignore
+              setSnackbar(_ => Some(<>
+                <p> {React.string("Permission denied")} </p>
+                <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                  {React.string("Dismiss")}
+                </button>
+              </>))
               Promise.resolve()
             })
             ->ignore

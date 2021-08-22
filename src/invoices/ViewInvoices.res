@@ -1,7 +1,8 @@
 @react.component
 let make = (~customerRef) => {
   let (invoices, setInvoices) = React.useState(() => [])
-  let customer = Hooks.useCustomer(~customerRef)
+  let (customers, _) = React.useContext(Context.Customers.context)
+  let customer = customers->Js.Array2.find(((ref, _)) => customerRef === ref)
 
   React.useEffect1(() => {
     open Firebase.Firestore
@@ -22,6 +23,22 @@ let make = (~customerRef) => {
 
     Some(unsubscribe)
   }, [])
+
+  React.useEffect1(() => {
+    let hash = Utils.location["hash"]
+
+    Utils.window["requestAnimationFrame"](.(. ()) => {
+      Utils.window["requestAnimationFrame"](.(. ()) => {
+        Utils.window["requestAnimationFrame"](.(. ()) => {
+          if hash && Utils.document["querySelector"](. hash) {
+            Utils.document["querySelector"](. hash)["scrollIntoView"](.)
+          }
+        })
+      })
+    })->ignore
+
+    None
+  }, [invoices])
 
   switch customer {
   | None => <p> {React.string("Invalid customer ID.")} </p>

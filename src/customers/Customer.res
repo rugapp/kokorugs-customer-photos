@@ -4,9 +4,11 @@ external initAutocomplete: (Dom.element, {..}) => {..} = "Autocomplete"
 external removeListener: {..} => unit = "removeListener"
 @val @scope("document") external querySelector: string => Js.Nullable.t<'a> = "querySelector"
 @send external focus: Dom.element => unit = "focus"
-@val external location: {..} = "location"
 
 type mode = Create | Edit(string)
+
+let find = (~customers, ~customerRef) =>
+  customers->Js.Array2.find(((ref, _)) => customerRef === ref)
 
 @react.component
 let make = (~name="", ~mode=Create) => {
@@ -23,6 +25,7 @@ let make = (~name="", ~mode=Create) => {
 
   let inputRef = React.useRef(Js.Nullable.null)
   let (customers, _setCustomers) = React.useContext(Context.Customers.context)
+  let setSnackbar = React.useContext(Context.Snackbar.context)
   let (state, setState) = React.useState(() => initialState)
 
   React.useEffect1(() => {
@@ -30,7 +33,7 @@ let make = (~name="", ~mode=Create) => {
     | Create => ()
     | Edit(customerRef) =>
       setState(state =>
-        switch customers->Js.Array2.find(((ref, _)) => customerRef === ref) {
+        switch find(~customers, ~customerRef) {
         | None => state
         | Some((_ref, customer)) => customer
         }
@@ -152,23 +155,38 @@ let make = (~name="", ~mode=Create) => {
         | Create =>
           addDoc(collection(db, "customers"), state)
           ->Promise.then(response => {
-            location["href"] = `/customers/${response["id"]}/view`
+            Utils.location["href"] = `/customers/${response["id"]}/view`
             Promise.resolve()
           })
           ->Promise.catch(error => {
             Js.log(error)
-            %raw("alert('Permission denied.')")->ignore
+            setSnackbar(_ => Some(<>
+              <p> {React.string("Permission denied")} </p>
+              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                {React.string("Dismiss")}
+              </button>
+            </>))
             Promise.resolve()
           })
         | Edit(customerRef) =>
           setDoc(doc(db, ["customers", customerRef]), state)
           ->Promise.then(_response => {
-            location["href"] = `/customers/${customerRef}/view`
+            setSnackbar(_ => Some(<>
+              <p> {React.string("Customer updated successfully")} </p>
+              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                {React.string("Dismiss")}
+              </button>
+            </>))
             Promise.resolve()
           })
           ->Promise.catch(error => {
             Js.log(error)
-            %raw("alert('Permission denied.')")->ignore
+            setSnackbar(_ => Some(<>
+              <p> {React.string("Permission denied")} </p>
+              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                {React.string("Dismiss")}
+              </button>
+            </>))
             Promise.resolve()
           })
         }->ignore
