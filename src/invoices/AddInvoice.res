@@ -133,6 +133,7 @@ let make = (~customerRef) => {
           className=%cx("visibility: hidden; width: 0; height: 0; overflow: hidden;")
           ref={ReactDOM.Ref.domRef(fileInputRef)}
           type_="file"
+          accept="image/*"
           multiple=true
           onChange={event => {
             open Firebase.Storage
