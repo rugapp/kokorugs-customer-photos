@@ -10,6 +10,7 @@ let make = (~customerRef) => {
     date: "",
   }
 
+  let (isLoading, setIsLoading) = React.useState(() => false)
   let (invoice, setInvoice) = React.useState(() => initialState)
   let (customers, _) = React.useContext(Context.Customers.context)
   let setSnackbar = React.useContext(Context.Snackbar.context)
@@ -94,6 +95,7 @@ let make = (~customerRef) => {
           <strong> {React.string("Invoice Number")} </strong>
           <input type_="text" name="id" onChange=handleChange value=invoice.id required=true />
         </Styled.Form.Label>
+        {isLoading ? <p> {React.string("Loading...")} </p> : React.null}
         <Styled.Invoice>
           <section>
             {invoice.photos
@@ -135,6 +137,8 @@ let make = (~customerRef) => {
           onChange={event => {
             open Firebase.Storage
 
+            setIsLoading(_ => true)
+
             ReactEvent.Form.target(event)["files"]
             ->Js.Array2.from
             ->Js.Array2.map(file => {
@@ -150,9 +154,7 @@ let make = (~customerRef) => {
                   ref
                   ->uploadBytes(blob)
                   ->Promise.then(snapshot =>
-                    getDownloadURL(
-                      storageRef(storage, [snapshot["metadata"]["fullPath"]]),
-                    )->Promise.then(Promise.resolve)
+                    getDownloadURL(storageRef(storage, [snapshot["metadata"]["fullPath"]]))
                   )
                 })
               })
@@ -164,12 +166,13 @@ let make = (~customerRef) => {
                 photos: invoice.photos->Js.Array2.concat(urls),
               })
             )
-            ->Promise.finally(() =>
+            ->Promise.finally(() => {
+              setIsLoading(_ => false)
               switch fileInputRef.current->Js.Nullable.toOption {
               | None => ()
               | Some(node) => ReactDOM.domElementToObj(node)["value"] = ""
               }
-            )
+            })
             ->ignore
           }}
         />

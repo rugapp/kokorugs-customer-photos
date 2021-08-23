@@ -67,7 +67,7 @@ let make = (~customerRef) => {
         </>)
         ->React.array
       } else {
-        <p> {React.string("no invoices")} </p>
+        <p> {React.string("This customer doesn't have any invoices yet.")} </p>
       }}
     </>
   }
