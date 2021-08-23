@@ -7,7 +7,7 @@
 @new external uint8Array: 'a => 'b = "Uint8Array"
 @val external url: 'a = "URL"
 
-let resizeAndHashImageFromFile = (~max=2048, file) =>
+let resizeAndHashImageFromFile = (~max=1024, file) =>
   Promise.make((resolve, reject) => {
     let canvas = document["createElement"](. "canvas")
     let img = image
