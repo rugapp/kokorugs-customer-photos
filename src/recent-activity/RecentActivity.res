@@ -8,6 +8,10 @@ module TableContainer = %styled.div(`
     max-width: 100%;
     min-width: 700px;
 
+    thead {
+      text-align: left;
+    }
+
     tr {
 
       &:last-of-type{
