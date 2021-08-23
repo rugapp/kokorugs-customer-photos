@@ -13,6 +13,7 @@ let make = (~customerRef) => {
   let (invoice, setInvoice) = React.useState(() => initialState)
   let (customers, _) = React.useContext(Context.Customers.context)
   let setSnackbar = React.useContext(Context.Snackbar.context)
+  let user = React.useContext(Context.User.context)
   let customer = customers->Js.Array2.find(((ref, _)) => customerRef === ref)
   let fileInputRef = React.useRef(Js.Nullable.null)
 
@@ -59,9 +60,22 @@ let make = (~customerRef) => {
                 }: Types.invoice
               ),
             )
-            ->Promise.then(_response => {
-              location["href"] = `/customers/${customerRef}/view`
-              Promise.resolve()
+            ->Promise.then(response => {
+              addDoc(
+                collection(db, "activity"),
+                (
+                  {
+                    date: Js.Date.make()->Js.Date.toISOString,
+                    user: user["displayName"],
+                    event: #InvoiceCreated,
+                    link: `/customers/${customerRef}/view#${response["id"]}`,
+                    meta: [],
+                  }: Types.activity
+                ),
+              )->Promise.then(_ => {
+                location["href"] = `/customers/${customerRef}/view`
+                Promise.resolve()
+              })
             })
             ->Promise.catch(error => {
               Js.log(error)

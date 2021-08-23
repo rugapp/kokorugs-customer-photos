@@ -12,3 +12,12 @@ type customer = {
 }
 
 type invoice = {id: string, photos: array<string>, date: string}
+
+type event = [#CustomerCreated | #CustomerUpdated | #InvoiceCreated]
+type activity = {
+  date: string,
+  user: string,
+  event: event,
+  link: string,
+  meta: array<string>,
+}

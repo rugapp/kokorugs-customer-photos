@@ -25,6 +25,7 @@ module Firestore = {
 
   type customerData<'a> = {id: string, ref: 'a, data: (. unit) => Types.customer}
   type invoiceData<'a> = {id: string, ref: 'a, data: (. unit) => Types.invoice}
+  type activityData<'a> = {id: string, ref: 'a, data: (. unit) => Types.activity}
 
   @send external forEach: (iterable<'a>, 'a => 'b) => unit = "forEach"
 
@@ -35,8 +36,8 @@ module Firestore = {
   @module("firebase/firestore")
   external collectionGroup: (db, string) => collection = "collectionGroup"
   @module("firebase/firestore") external addDoc: (collection, 'a) => Promise.t<'b> = "addDoc"
-  @module("firebase/firestore") external setDoc: (doc, 'a) => Promise.t<'b> = "setDoc"
   @module("firebase/firestore") @variadic external doc: (db, array<string>) => doc = "doc"
+  @module("firebase/firestore") external setDoc: (doc, 'a) => Promise.t<'b> = "setDoc"
   @module("firebase/firestore") @variadic
   external query: (collection, array<clause>) => query = "query"
   @module("firebase/firestore") external where: (string, string, string) => clause = "where"

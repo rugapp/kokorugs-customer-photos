@@ -10,6 +10,45 @@ type mode = Create | Edit(string)
 let find = (~customers, ~customerRef) =>
   customers->Js.Array2.find(((ref, _)) => customerRef === ref)
 
+let diff = (~old: Types.customer, ~new: Types.customer) => {
+  let updates = []
+
+  let updates =
+    old.name !== new.name
+      ? updates->Js.Array2.concat([`Name changed from ${old.name} to ${new.name}`])
+      : updates
+
+  let updates =
+    old.address.street !== new.address.street
+      ? updates->Js.Array2.concat([
+          `Street address changed from ${old.address.street} to ${new.address.street}`,
+        ])
+      : updates
+
+  let updates =
+    old.address.suite !== new.address.suite
+      ? updates->Js.Array2.concat([
+          `Suite changed from ${old.address.suite} to ${new.address.suite}`,
+        ])
+      : updates
+
+  let updates =
+    old.address.city !== new.address.city
+      ? updates->Js.Array2.concat([`City changed from ${old.address.city} to ${new.address.city}`])
+      : updates
+
+  let updates =
+    old.address.state !== new.address.state
+      ? updates->Js.Array2.concat([
+          `State changed from ${old.address.state} to ${new.address.state}`,
+        ])
+      : updates
+
+  old.address.zip !== new.address.zip
+    ? updates->Js.Array2.concat([`Zip changed from ${old.address.zip} to ${new.address.zip}`])
+    : updates
+}
+
 @react.component
 let make = (~name="", ~mode=Create) => {
   let initialState: Types.customer = {
@@ -26,6 +65,7 @@ let make = (~name="", ~mode=Create) => {
   let inputRef = React.useRef(Js.Nullable.null)
   let (customers, _setCustomers) = React.useContext(Context.Customers.context)
   let setSnackbar = React.useContext(Context.Snackbar.context)
+  let user = React.useContext(Context.User.context)
   let (state, setState) = React.useState(() => initialState)
 
   React.useEffect1(() => {
@@ -155,8 +195,21 @@ let make = (~name="", ~mode=Create) => {
         | Create =>
           addDoc(collection(db, "customers"), state)
           ->Promise.then(response => {
-            Utils.location["href"] = `/customers/${response["id"]}/view`
-            Promise.resolve()
+            addDoc(
+              collection(db, "activity"),
+              (
+                {
+                  date: Js.Date.make()->Js.Date.toISOString,
+                  user: user["displayName"],
+                  event: #CustomerCreated,
+                  link: `/customers/${response["id"]}/view`,
+                  meta: [],
+                }: Types.activity
+              ),
+            )->Promise.then(_ => {
+              Utils.location["href"] = `/customers/${response["id"]}/view`
+              Promise.resolve()
+            })
           })
           ->Promise.catch(error => {
             Js.log(error)
@@ -177,7 +230,21 @@ let make = (~name="", ~mode=Create) => {
                 {React.string("Dismiss")}
               </button>
             </>))
-            Promise.resolve()
+
+            let (_, oldCustomer) = find(~customers, ~customerRef)->Belt.Option.getExn
+
+            addDoc(
+              collection(db, "activity"),
+              (
+                {
+                  date: Js.Date.make()->Js.Date.toISOString,
+                  user: user["displayName"],
+                  event: #CustomerUpdated,
+                  link: `customers/${customerRef}/view`,
+                  meta: diff(~old=oldCustomer, ~new=state),
+                }: Types.activity
+              ),
+            )->Promise.then(Promise.resolve)
           })
           ->Promise.catch(error => {
             Js.log(error)
