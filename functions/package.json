@@ -17,8 +17,7 @@
     "firebase-functions": "*"
   },
   "devDependencies": {
-    "firebase-functions-test": "*",
-    "dotenv": "*"
+    "firebase-functions-test": "*"
   },
   "private": true
 }

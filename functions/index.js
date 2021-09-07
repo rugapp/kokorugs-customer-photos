@@ -1,13 +1,11 @@
-require("dotenv").config();
-
 const https = require("https");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
-const COMPANY_ID = process.env.COMPANY_ID;
-const CLIENT_ID = process.env.CLIENT_ID;
-const SECRET = process.env.SECRET;
+const COMPANY_ID = functions.config().qbo.companyid;
+const CLIENT_ID = functions.config().qbo.clientid;
+const SECRET = functions.config().qbo.secret;
 
 async function getAccessToken() {
   const { accessToken, refreshToken, expiresIn } = await admin
