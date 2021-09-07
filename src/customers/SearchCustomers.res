@@ -30,7 +30,7 @@ module ResultsList = %styled.ul(`
 `)
 
 let stringifyCustomer = (customer: Types.customer) =>
-  `${customer.name}|${customer.address.street}|${customer.address.suite}|${customer.address.city}|${customer.address.state}|${customer.address.zip}`
+  `${customer.name}|${customer.address.billing.street}|${customer.address.billing.suite}|${customer.address.billing.city}|${customer.address.billing.state}|${customer.address.billing.zip}`
 
 @react.component
 let make = () => {
@@ -72,15 +72,15 @@ let make = () => {
               <em>
                 {React.string(customer.name)}
                 <br />
-                {React.string(customer.address.street)}
-                {if Js.String2.length(customer.address.suite) > 0 {
-                  <> <br /> {React.string(customer.address.suite)} </>
+                {React.string(customer.address.billing.street)}
+                {if Js.String2.length(customer.address.billing.suite) > 0 {
+                  <> <br /> {React.string(customer.address.billing.suite)} </>
                 } else {
                   React.null
                 }}
                 <br />
                 {React.string(
-                  `${customer.address.city}, ${customer.address.state} ${customer.address.zip}`,
+                  `${customer.address.billing.city}, ${customer.address.billing.state} ${customer.address.billing.zip}`,
                 )}
               </em>
             </Link>

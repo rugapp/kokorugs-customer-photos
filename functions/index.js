@@ -7,6 +7,20 @@ const COMPANY_ID = functions.config().qbo.companyid;
 const CLIENT_ID = functions.config().qbo.clientid;
 const SECRET = functions.config().qbo.secret;
 
+async function setCustomer() {
+  // const fs = require("fs");
+  // const customers = JSON.parse(
+  //   fs.readFileSync("../quickbooks/customers-formatted.json", "utf-8")
+  // ).slice(0, 1000);
+  // (async () => {
+  //   for (const customer of customers) {
+  //     console.log(customer.id);
+  //     await admin.firestore().doc(`customers/${customer.id}`).set(customer);
+  //   }
+  //   console.log("Done!!!11!");
+  // })();
+}
+
 async function getAccessToken() {
   const { accessToken, refreshToken, expiresIn } = await admin
     .firestore()
@@ -160,6 +174,32 @@ async function getCustomers() {
 exports.handleCustomerUpdate = functions.https.onRequest(
   async (request, response) => {
     functions.logger.log("Webhook triggered:", request.body);
+
+    /*
+      {
+        "eventNotifications":[
+        {
+            "realmId":"1185883450",
+            "dataChangeEvent":
+            {
+              "entities":[
+              {
+                  "name":"Customer",
+                  "id":"1",
+                  "operation":"Create",
+                  "lastUpdated":"2015-10-05T14:42:19-0700"
+              },
+              {
+                  "name":"Vendor",
+                  "id":"1",
+                  "operation":"Create",
+                  "lastUpdated":"2015-10-05T14:42:19-0700"
+              }]
+            }
+        }]
+      }
+    */
+
     response.sendStatus(200);
   }
 );

@@ -19,33 +19,37 @@ let diff = (~old: Types.customer, ~new: Types.customer) => {
       : updates
 
   let updates =
-    old.address.street !== new.address.street
+    old.address.billing.street !== new.address.billing.street
       ? updates->Js.Array2.concat([
-          `Street address changed from ${old.address.street} to ${new.address.street}`,
+          `Street address changed from ${old.address.billing.street} to ${new.address.billing.street}`,
         ])
       : updates
 
   let updates =
-    old.address.suite !== new.address.suite
+    old.address.billing.suite !== new.address.billing.suite
       ? updates->Js.Array2.concat([
-          `Suite changed from ${old.address.suite} to ${new.address.suite}`,
+          `Suite changed from ${old.address.billing.suite} to ${new.address.billing.suite}`,
         ])
       : updates
 
   let updates =
-    old.address.city !== new.address.city
-      ? updates->Js.Array2.concat([`City changed from ${old.address.city} to ${new.address.city}`])
-      : updates
-
-  let updates =
-    old.address.state !== new.address.state
+    old.address.billing.city !== new.address.billing.city
       ? updates->Js.Array2.concat([
-          `State changed from ${old.address.state} to ${new.address.state}`,
+          `City changed from ${old.address.billing.city} to ${new.address.billing.city}`,
         ])
       : updates
 
-  old.address.zip !== new.address.zip
-    ? updates->Js.Array2.concat([`Zip changed from ${old.address.zip} to ${new.address.zip}`])
+  let updates =
+    old.address.billing.state !== new.address.billing.state
+      ? updates->Js.Array2.concat([
+          `State changed from ${old.address.billing.state} to ${new.address.billing.state}`,
+        ])
+      : updates
+
+  old.address.billing.zip !== new.address.billing.zip
+    ? updates->Js.Array2.concat([
+        `Zip changed from ${old.address.billing.zip} to ${new.address.billing.zip}`,
+      ])
     : updates
 }
 
@@ -54,12 +58,22 @@ let make = (~name="", ~mode=Create) => {
   let initialState: Types.customer = {
     name: name->Js.Global.decodeURI,
     address: {
-      street: "",
-      suite: "",
-      city: "",
-      state: "",
-      zip: "",
+      billing: {
+        street: "",
+        suite: "",
+        city: "",
+        state: "",
+        zip: "",
+      },
+      shipping: {
+        street: "",
+        suite: "",
+        city: "",
+        state: "",
+        zip: "",
+      },
     },
+    phone: "",
   }
 
   let inputRef = React.useRef(Js.Nullable.null)
@@ -118,7 +132,10 @@ let make = (~name="", ~mode=Create) => {
               ...state,
               address: {
                 ...state.address,
-                street: component["short_name"],
+                billing: {
+                  ...state.address.billing,
+                  street: component["short_name"],
+                },
               },
             })
           | "route" =>
@@ -126,7 +143,10 @@ let make = (~name="", ~mode=Create) => {
               ...state,
               address: {
                 ...state.address,
-                street: `${state.address.street} ${component["short_name"]}`,
+                billing: {
+                  ...state.address.billing,
+                  street: `${state.address.billing.street} ${component["short_name"]}`,
+                },
               },
             })
           | "postal_code" =>
@@ -134,7 +154,10 @@ let make = (~name="", ~mode=Create) => {
               ...state,
               address: {
                 ...state.address,
-                zip: component["short_name"],
+                billing: {
+                  ...state.address.billing,
+                  zip: component["short_name"],
+                },
               },
             })
           | "locality" =>
@@ -142,7 +165,10 @@ let make = (~name="", ~mode=Create) => {
               ...state,
               address: {
                 ...state.address,
-                city: component["long_name"],
+                billing: {
+                  ...state.address.billing,
+                  city: component["long_name"],
+                },
               },
             })
           | "administrative_area_level_1" =>
@@ -150,7 +176,10 @@ let make = (~name="", ~mode=Create) => {
               ...state,
               address: {
                 ...state.address,
-                state: component["short_name"],
+                billing: {
+                  ...state.address.billing,
+                  state: component["short_name"],
+                },
               },
             })
           | _ => ()
@@ -168,11 +197,26 @@ let make = (~name="", ~mode=Create) => {
     setState(state =>
       switch ReactEvent.Form.target(event)["name"] {
       | "name" => {...state, name: value}
-      | "street" => {...state, address: {...state.address, street: value}}
-      | "suite" => {...state, address: {...state.address, suite: value}}
-      | "city" => {...state, address: {...state.address, city: value}}
-      | "state" => {...state, address: {...state.address, state: value}}
-      | "zip" => {...state, address: {...state.address, zip: value}}
+      | "street" => {
+          ...state,
+          address: {...state.address, billing: {...state.address.billing, street: value}},
+        }
+      | "suite" => {
+          ...state,
+          address: {...state.address, billing: {...state.address.billing, suite: value}},
+        }
+      | "city" => {
+          ...state,
+          address: {...state.address, billing: {...state.address.billing, city: value}},
+        }
+      | "state" => {
+          ...state,
+          address: {...state.address, billing: {...state.address.billing, state: value}},
+        }
+      | "zip" => {
+          ...state,
+          address: {...state.address, billing: {...state.address.billing, zip: value}},
+        }
       | _ => state
       }
     )
@@ -192,35 +236,35 @@ let make = (~name="", ~mode=Create) => {
         ReactEvent.Form.preventDefault(event)
 
         switch mode {
-        | Create =>
-          addDoc(collection(db, "customers"), state)
-          ->Promise.then(response => {
-            addDoc(
-              collection(db, "activity"),
-              (
-                {
-                  date: Js.Date.make()->Js.Date.toISOString,
-                  user: user["displayName"],
-                  event: #CustomerCreated,
-                  link: `/customers/${response["id"]}/view`,
-                  meta: [],
-                }: Types.activity
-              ),
-            )->Promise.then(_ => {
-              Utils.location["href"] = `/customers/${response["id"]}/view`
-              Promise.resolve()
-            })
-          })
-          ->Promise.catch(error => {
-            Js.log(error)
-            setSnackbar(_ => Some(<>
-              <p> {React.string("Permission denied")} </p>
-              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
-                {React.string("Dismiss")}
-              </button>
-            </>))
-            Promise.resolve()
-          })
+        | Create => %raw(`alert("This feature is coming soon")`)
+        // addDoc(collection(db, "customers"), state)
+        // ->Promise.then(response => {
+        //   addDoc(
+        //     collection(db, "activity"),
+        //     (
+        //       {
+        //         date: Js.Date.make()->Js.Date.toISOString,
+        //         user: user["displayName"],
+        //         event: #CustomerCreated,
+        //         link: `/customers/${response["id"]}/view`,
+        //         meta: [],
+        //       }: Types.activity
+        //     ),
+        //   )->Promise.then(_ => {
+        //     Utils.location["href"] = `/customers/${response["id"]}/view`
+        //     Promise.resolve()
+        //   })
+        // })
+        // ->Promise.catch(error => {
+        //   Js.log(error)
+        //   setSnackbar(_ => Some(<>
+        //     <p> {React.string("Permission denied")} </p>
+        //     <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+        //       {React.string("Dismiss")}
+        //     </button>
+        //   </>))
+        //   Promise.resolve()
+        // })
         | Edit(customerRef) =>
           setDoc(doc(db, ["customers", customerRef]), state)
           ->Promise.then(_response => {
@@ -268,31 +312,43 @@ let make = (~name="", ~mode=Create) => {
           type_="text"
           name="street"
           onChange=handleChange
-          value=state.address.street
+          value=state.address.billing.street
           required=true
           ref={ReactDOM.Ref.domRef(inputRef)}
         />
       </Styled.Form.Label>
       <Styled.Form.Label>
         <strong> {React.string("Suite")} </strong>
-        <input type_="text" name="suite" onChange=handleChange value=state.address.suite />
+        <input type_="text" name="suite" onChange=handleChange value=state.address.billing.suite />
       </Styled.Form.Label>
       <Styled.Form.Label>
         <strong> {React.string("City")} </strong>
         <input
-          type_="text" name="city" onChange=handleChange value=state.address.city required=true
+          type_="text"
+          name="city"
+          onChange=handleChange
+          value=state.address.billing.city
+          required=true
         />
       </Styled.Form.Label>
       <Styled.Form.Label>
         <strong> {React.string("State")} </strong>
         <input
-          type_="text" name="state" onChange=handleChange value=state.address.state required=true
+          type_="text"
+          name="state"
+          onChange=handleChange
+          value=state.address.billing.state
+          required=true
         />
       </Styled.Form.Label>
       <Styled.Form.Label>
         <strong> {React.string("Zip Code")} </strong>
         <input
-          type_="text" name="zip" onChange=handleChange value=state.address.zip required=true
+          type_="text"
+          name="zip"
+          onChange=handleChange
+          value=state.address.billing.zip
+          required=true
         />
       </Styled.Form.Label>
       <Styled.Form.Button variation=Styled.Form.Primary>

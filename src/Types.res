@@ -6,9 +6,15 @@ type address = {
   zip: string,
 }
 
+type addresses = {
+  billing: address,
+  shipping: address,
+}
+
 type customer = {
   name: string,
-  address: address,
+  address: addresses,
+  phone: string,
 }
 
 type invoice = {id: string, photos: array<string>, date: string}
