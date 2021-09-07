@@ -7,18 +7,24 @@ const COMPANY_ID = functions.config().qbo.companyid;
 const CLIENT_ID = functions.config().qbo.clientid;
 const SECRET = functions.config().qbo.secret;
 
-async function setCustomer() {
-  // const fs = require("fs");
-  // const customers = JSON.parse(
-  //   fs.readFileSync("../quickbooks/customers-formatted.json", "utf-8")
-  // ).slice(0, 1000);
-  // (async () => {
-  //   for (const customer of customers) {
-  //     console.log(customer.id);
-  //     await admin.firestore().doc(`customers/${customer.id}`).set(customer);
-  //   }
-  //   console.log("Done!!!11!");
-  // })();
+async function initializeEmulator() {
+  const fs = require("fs");
+
+  await admin.firestore().doc("auth/tokens").set({
+    refreshToken: functions.config().qbo.refreshtoken,
+    authToken: "",
+    expiresIn: new Date().toISOString(),
+  });
+  console.log("Added tokens");
+
+  const customers = JSON.parse(
+    fs.readFileSync("../quickbooks/customers-formatted.json", "utf-8")
+  ).slice(0, 1000);
+
+  for (const customer of customers) {
+    await admin.firestore().doc(`customers/${customer.id}`).set(customer);
+  }
+  console.log("Added customers");
 }
 
 async function getAccessToken() {
@@ -119,6 +125,14 @@ async function qboRequest({ data = "", path }) {
   });
 }
 
+async function getCustomer(id) {
+  const { Customer } = await qboRequest({
+    path: `/v3/company/${COMPANY_ID}/customer/${id}?minorversion=62`,
+  });
+
+  return Customer;
+}
+
 async function getCustomers() {
   const {
     QueryResponse: { totalCount },
@@ -148,7 +162,11 @@ async function getCustomers() {
 
   let customers = await helper();
 
-  return customers.map((customer) => ({
+  return customers.map(formatCustomer);
+}
+
+function formatCustomer(customer) {
+  return {
     id: customer.Id,
     name: customer.DisplayName || "",
     address: {
@@ -168,37 +186,26 @@ async function getCustomers() {
       },
     },
     phone: customer.PrimaryPhone?.FreeFormNumber || "",
-  }));
+  };
 }
 
 exports.handleCustomerUpdate = functions.https.onRequest(
   async (request, response) => {
     functions.logger.log("Webhook triggered:", request.body);
 
-    /*
-      {
-        "eventNotifications":[
-        {
-            "realmId":"1185883450",
-            "dataChangeEvent":
-            {
-              "entities":[
-              {
-                  "name":"Customer",
-                  "id":"1",
-                  "operation":"Create",
-                  "lastUpdated":"2015-10-05T14:42:19-0700"
-              },
-              {
-                  "name":"Vendor",
-                  "id":"1",
-                  "operation":"Create",
-                  "lastUpdated":"2015-10-05T14:42:19-0700"
-              }]
-            }
-        }]
+    for (const notification of request.body.eventNotifications) {
+      for (const customer of notification.dataChangeEvent.entities) {
+        if (customer.id) {
+          const updatedCustomer = await getCustomer(customer.id);
+          await admin
+            .firestore()
+            .doc(`customers/${customer.id}`)
+            .set(formatCustomer(updatedCustomer));
+        } else {
+          functions.logger.log("Delete/merge triggered:", request.body);
+        }
       }
-    */
+    }
 
     response.sendStatus(200);
   }

@@ -197,6 +197,7 @@ let make = (~name="", ~mode=Create) => {
     setState(state =>
       switch ReactEvent.Form.target(event)["name"] {
       | "name" => {...state, name: value}
+      | "phone" => {...state, phone: value}
       | "street" => {
           ...state,
           address: {...state.address, billing: {...state.address.billing, street: value}},
@@ -305,6 +306,10 @@ let make = (~name="", ~mode=Create) => {
       <Styled.Form.Label>
         <strong> {React.string("Name")} </strong>
         <input type_="text" name="name" onChange=handleChange value=state.name required=true />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("Phone")} </strong>
+        <input type_="text" name="phone" onChange=handleChange value=state.phone required=true />
       </Styled.Form.Label>
       <Styled.Form.Label>
         <strong> {React.string("Address")} </strong>
