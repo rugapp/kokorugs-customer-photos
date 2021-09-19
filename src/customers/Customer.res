@@ -74,6 +74,9 @@ let make = (~name="", ~mode=Create) => {
       },
     },
     phone: "",
+    mobile: "",
+    email: "",
+    syncToken: "0",
   }
 
   let inputRef = React.useRef(Js.Nullable.null)
@@ -233,7 +236,7 @@ let make = (~name="", ~mode=Create) => {
     <form
       autoComplete="off"
       onSubmit={event => {
-        open Firebase.Firestore
+        // open Firebase.Firestore
         ReactEvent.Form.preventDefault(event)
 
         switch mode {
@@ -258,49 +261,49 @@ let make = (~name="", ~mode=Create) => {
         // })
         // ->Promise.catch(error => {
         //   Js.log(error)
-        //   setSnackbar(_ => Some(<>
-        //     <p> {React.string("Permission denied")} </p>
-        //     <button type_="button" onClick={_event => setSnackbar(_ => None)}>
-        //       {React.string("Dismiss")}
-        //     </button>
-        //   </>))
+        // setSnackbar(_ => Some(<>
+        //   <p> {React.string("Permission denied")} </p>
+        //   <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+        //     {React.string("Dismiss")}
+        //   </button>
+        // </>))
         //   Promise.resolve()
         // })
         | Edit(customerRef) =>
-          setDoc(doc(db, ["customers", customerRef]), state)
-          ->Promise.then(_response => {
-            setSnackbar(_ => Some(<>
-              <p> {React.string("Customer updated successfully")} </p>
-              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
-                {React.string("Dismiss")}
-              </button>
-            </>))
+          switch find(~customers, ~customerRef) {
+          | None => ()
+          | Some((_, customer)) =>
+            Js.log(customer.syncToken)
 
-            let (_, oldCustomer) = find(~customers, ~customerRef)->Belt.Option.getExn
-
-            addDoc(
-              collection(db, "activity"),
-              (
-                {
-                  date: Js.Date.make()->Js.Date.toISOString,
-                  user: user["displayName"],
-                  event: #CustomerUpdated,
-                  link: `customers/${customerRef}/view`,
-                  meta: diff(~old=oldCustomer, ~new=state),
-                }: Types.activity
-              ),
-            )->Promise.then(Promise.resolve)
-          })
-          ->Promise.catch(error => {
-            Js.log(error)
-            setSnackbar(_ => Some(<>
-              <p> {React.string("Permission denied")} </p>
-              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
-                {React.string("Dismiss")}
-              </button>
-            </>))
-            Promise.resolve()
-          })
+            Utils.window["fetch"](.
+              "http://localhost:8084/kokorugs-customer-photos/us-central1/updateQuickbooksCustomer",
+              {
+                "method": "POST",
+                "body": Utils.window["JSON"]["stringify"](. {
+                  "id": customerRef,
+                  "syncToken": customer.syncToken,
+                  "name": state.name,
+                  "mobile": state.mobile,
+                  "phone": state.phone,
+                  "address": state.address,
+                }),
+              },
+            )["then"](._ => {
+              setSnackbar(_ => Some(<>
+                <p> {React.string("Customer successfully updated.")} </p>
+                <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                  {React.string("Dismiss")}
+                </button>
+              </>))
+            })["catch"](._error =>
+              setSnackbar(_ => Some(<>
+                <p> {React.string("A problem occurred.")} </p>
+                <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                  {React.string("Dismiss")}
+                </button>
+              </>))
+            )
+          }
         }->ignore
       }}>
       <Styled.Form.Label>
@@ -310,6 +313,14 @@ let make = (~name="", ~mode=Create) => {
       <Styled.Form.Label>
         <strong> {React.string("Phone")} </strong>
         <input type_="text" name="phone" onChange=handleChange value=state.phone required=true />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("Mobile")} </strong>
+        <input type_="text" name="mobile" onChange=handleChange value=state.mobile />
+      </Styled.Form.Label>
+      <Styled.Form.Label>
+        <strong> {React.string("Email")} </strong>
+        <input type_="text" name="email" onChange=handleChange value=state.email />
       </Styled.Form.Label>
       <Styled.Form.Label>
         <strong> {React.string("Address")} </strong>

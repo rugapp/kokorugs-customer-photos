@@ -7,24 +7,22 @@ const COMPANY_ID = functions.config().qbo.companyid;
 const CLIENT_ID = functions.config().qbo.clientid;
 const SECRET = functions.config().qbo.secret;
 
-async function initializeEmulator() {
-  const fs = require("fs");
+async function initializeFirestore() {
+  console.log("Initializing Firestore...");
 
-  await admin.firestore().doc("auth/tokens").set({
-    refreshToken: functions.config().qbo.refreshtoken,
-    authToken: "",
-    expiresIn: new Date().toISOString(),
-  });
-  console.log("Added tokens");
-
-  const customers = JSON.parse(
-    fs.readFileSync("../quickbooks/customers-formatted.json", "utf-8")
-  ).slice(0, 1000);
-
-  for (const customer of customers) {
-    await admin.firestore().doc(`customers/${customer.id}`).set(customer);
+  if (!(await admin.firestore().doc("auth/tokens").get()).data()) {
+    throw new Error("Please create the auth/tokens doc.");
   }
-  console.log("Added customers");
+
+  console.log("Fetching customers...");
+  const customers = await getCustomers();
+
+  console.log("Adding customers to Firestore...");
+  for (const customer of customers) {
+    admin.firestore().doc(`customers/${customer.id}`).set(customer);
+  }
+
+  console.log("Initialized Firestore!");
 }
 
 async function getAccessToken() {
@@ -70,6 +68,9 @@ async function getAccessToken() {
         qboResponse.on("end", async () => {
           const { access_token: accessToken, refresh_token: refreshToken } =
             JSON.parse(body);
+
+          console.warn("Please update the refresh token in production!");
+          console.log(refreshToken);
 
           await admin
             .firestore()
@@ -125,14 +126,6 @@ async function qboRequest({ data = "", path }) {
   });
 }
 
-async function getCustomer(id) {
-  const { Customer } = await qboRequest({
-    path: `/v3/company/${COMPANY_ID}/customer/${id}?minorversion=62`,
-  });
-
-  return Customer;
-}
-
 async function getCustomers() {
   const {
     QueryResponse: { totalCount },
@@ -165,30 +158,83 @@ async function getCustomers() {
   return customers.map(formatCustomer);
 }
 
+async function getCustomer(id) {
+  const { Customer } = await qboRequest({
+    path: `/v3/company/${COMPANY_ID}/customer/${id}?minorversion=62`,
+  });
+
+  return Customer;
+}
+
 function formatCustomer(customer) {
   return {
     id: customer.Id,
-    name: customer.DisplayName || "",
+    name: customer.DisplayName ?? "",
     address: {
       billing: {
-        street: customer.BillAddr?.Line1 || "",
-        suite: customer.BillAddr?.Line2 || "",
-        city: customer.BillAddr?.City || "",
-        state: customer.BillAddr?.CountrySubDivisionCode || "",
-        zip: customer.BillAddr?.PostalCode || "",
+        street: customer.BillAddr?.Line1 ?? "",
+        suite: customer.BillAddr?.Line2 ?? "",
+        city: customer.BillAddr?.City ?? "",
+        state: customer.BillAddr?.CountrySubDivisionCode ?? "",
+        zip: customer.BillAddr?.PostalCode ?? "",
       },
       shipping: {
-        street: customer.ShipAddr?.Line1 || "",
-        suite: customer.ShipAddr?.Line2 || "",
-        city: customer.ShipAddr?.City || "",
-        state: customer.ShipAddr?.CountrySubDivisionCode || "",
-        zip: customer.ShipAddr?.PostalCode || "",
+        street: customer.ShipAddr?.Line1 ?? "",
+        suite: customer.ShipAddr?.Line2 ?? "",
+        city: customer.ShipAddr?.City ?? "",
+        state: customer.ShipAddr?.CountrySubDivisionCode ?? "",
+        zip: customer.ShipAddr?.PostalCode ?? "",
       },
     },
-    phone: customer.PrimaryPhone?.FreeFormNumber || "",
+    phone: customer.PrimaryPhone?.FreeFormNumber ?? "",
+    mobile: customer.Mobile?.FreeFormNumber ?? "",
+    email: customer.PrimaryEmailAddr?.Address ?? "",
+    syncToken: customer.SyncToken,
   };
 }
 
+/**
+ * Endpoint for updating Quickbooks Online customers.
+ */
+exports.updateQuickbooksCustomer = functions.https.onRequest(
+  async (request, response) => {
+    const payload = JSON.parse(request.body);
+    console.log(payload);
+    response.set("Access-Control-Allow-Origin", "*");
+    response.set("Access-Control-Allow-Methods", "OPTIONS, POST");
+    try {
+      await qboRequest({
+        path: `/v3/company/${COMPANY_ID}/customer/?minorversion=62`,
+        data: JSON.stringify({
+          sparse: true,
+          Id: payload.id,
+          SyncToken: payload.syncToken,
+          DisplayName: payload.name,
+          PrintOnCheckName: payload.name,
+          Mobile: { FreeFormNumber: payload.mobile },
+          PrimaryPhone: { FreeFormNumber: payload.phone },
+          BillAddr: {
+            Line1: payload.address.billing.street,
+            Line2: payload.address.billing.suite,
+            City: payload.address.billing.city,
+            CountrySubDivisionCode: payload.address.billing.state,
+            PostalCode: payload.address.billing.zip,
+          },
+        }),
+      });
+
+      response.sendStatus(200);
+    } catch (error) {
+      console.log(error);
+      functions.logger.log("Error updating customer:", request.body);
+      response.sendStatus(500);
+    }
+  }
+);
+
+/**
+ * Webhook for handling updates to Firestore when QuickBooks Online is updated.
+ */
 exports.handleCustomerUpdate = functions.https.onRequest(
   async (request, response) => {
     functions.logger.log("Webhook triggered:", request.body);
@@ -201,8 +247,13 @@ exports.handleCustomerUpdate = functions.https.onRequest(
             .firestore()
             .doc(`customers/${customer.id}`)
             .set(formatCustomer(updatedCustomer));
-        } else {
-          functions.logger.log("Delete/merge triggered:", request.body);
+        }
+
+        if (customer.deletedId) {
+          await admin
+            .firestore()
+            .doc(`customers/${customer.deletedId}`)
+            .delete();
         }
       }
     }

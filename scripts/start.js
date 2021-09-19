@@ -11,5 +11,9 @@ function build() {
 }
 
 function serve() {
-  process.spawn("firebase", ["emulators:start"], { stdio: "inherit" });
+  process.spawn(
+    "firebase",
+    ["emulators:start", "--only", "hosting,storage,functions"],
+    { stdio: "inherit" }
+  );
 }

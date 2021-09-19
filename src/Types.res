@@ -15,6 +15,9 @@ type customer = {
   name: string,
   address: addresses,
   phone: string,
+  mobile: string,
+  email: string,
+  syncToken: string,
 }
 
 type invoice = {id: string, photos: array<string>, date: string}

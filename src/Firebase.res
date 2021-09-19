@@ -38,6 +38,7 @@ module Firestore = {
   @module("firebase/firestore") external addDoc: (collection, 'a) => Promise.t<'b> = "addDoc"
   @module("firebase/firestore") @variadic external doc: (db, array<string>) => doc = "doc"
   @module("firebase/firestore") external setDoc: (doc, 'a) => Promise.t<'b> = "setDoc"
+  @module("firebase/firestore") external deleteDoc: (doc, 'a) => Promise.t<'b> = "deleteDoc"
   @module("firebase/firestore") @variadic
   external query: (collection, array<clause>) => query = "query"
   @module("firebase/firestore") external where: (string, string, string) => clause = "where"
@@ -48,9 +49,9 @@ module Firestore = {
   @module("firebase/firestore") external getDocs: query => Promise.t<iterable<'a>> = "getDocs"
 
   let db = getFirestore()
-  if origin->Js.String2.includes("localhost") {
-    connectFirestoreEmulator(db, "localhost", 8081)
-  }
+  // if origin->Js.String2.includes("localhost") {
+  //   connectFirestoreEmulator(db, "localhost", 8081)
+  // }
 }
 
 module Storage = {
@@ -94,7 +95,7 @@ module Auth = {
   })
 
   let auth = getAuth()
-  if origin->Js.String2.includes("localhost") {
-    connectAuthEmulator(auth, "http://localhost:8083")
-  }
+  // if origin->Js.String2.includes("localhost") {
+  //   connectAuthEmulator(auth, "http://localhost:8083")
+  // }
 }
