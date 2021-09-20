@@ -10,49 +10,6 @@ type mode = Create | Edit(string)
 let find = (~customers, ~customerRef) =>
   customers->Js.Array2.find(((ref, _)) => customerRef === ref)
 
-let diff = (~old: Types.customer, ~new: Types.customer) => {
-  let updates = []
-
-  let updates =
-    old.name !== new.name
-      ? updates->Js.Array2.concat([`Name changed from ${old.name} to ${new.name}`])
-      : updates
-
-  let updates =
-    old.address.billing.street !== new.address.billing.street
-      ? updates->Js.Array2.concat([
-          `Street address changed from ${old.address.billing.street} to ${new.address.billing.street}`,
-        ])
-      : updates
-
-  let updates =
-    old.address.billing.suite !== new.address.billing.suite
-      ? updates->Js.Array2.concat([
-          `Suite changed from ${old.address.billing.suite} to ${new.address.billing.suite}`,
-        ])
-      : updates
-
-  let updates =
-    old.address.billing.city !== new.address.billing.city
-      ? updates->Js.Array2.concat([
-          `City changed from ${old.address.billing.city} to ${new.address.billing.city}`,
-        ])
-      : updates
-
-  let updates =
-    old.address.billing.state !== new.address.billing.state
-      ? updates->Js.Array2.concat([
-          `State changed from ${old.address.billing.state} to ${new.address.billing.state}`,
-        ])
-      : updates
-
-  old.address.billing.zip !== new.address.billing.zip
-    ? updates->Js.Array2.concat([
-        `Zip changed from ${old.address.billing.zip} to ${new.address.billing.zip}`,
-      ])
-    : updates
-}
-
 @react.component
 let make = (~name="", ~mode=Create) => {
   let initialState: Types.customer = {
@@ -76,7 +33,7 @@ let make = (~name="", ~mode=Create) => {
     phone: "",
     mobile: "",
     email: "",
-    syncToken: "0",
+    syncToken: "",
   }
 
   let inputRef = React.useRef(Js.Nullable.null)
@@ -112,8 +69,6 @@ let make = (~name="", ~mode=Create) => {
           "types": ["address"],
         },
       )
-
-      node->focus
 
       autocomplete["addListener"](."place_changed", () => {
         let place = autocomplete["getPlace"](.)
@@ -201,6 +156,8 @@ let make = (~name="", ~mode=Create) => {
       switch ReactEvent.Form.target(event)["name"] {
       | "name" => {...state, name: value}
       | "phone" => {...state, phone: value}
+      | "mobile" => {...state, mobile: value}
+      | "email" => {...state, email: value}
       | "street" => {
           ...state,
           address: {...state.address, billing: {...state.address.billing, street: value}},
@@ -236,55 +193,79 @@ let make = (~name="", ~mode=Create) => {
     <form
       autoComplete="off"
       onSubmit={event => {
-        // open Firebase.Firestore
         ReactEvent.Form.preventDefault(event)
 
         switch mode {
-        | Create => %raw(`alert("This feature is coming soon")`)
-        // addDoc(collection(db, "customers"), state)
-        // ->Promise.then(response => {
-        //   addDoc(
-        //     collection(db, "activity"),
-        //     (
-        //       {
-        //         date: Js.Date.make()->Js.Date.toISOString,
-        //         user: user["displayName"],
-        //         event: #CustomerCreated,
-        //         link: `/customers/${response["id"]}/view`,
-        //         meta: [],
-        //       }: Types.activity
-        //     ),
-        //   )->Promise.then(_ => {
-        //     Utils.location["href"] = `/customers/${response["id"]}/view`
-        //     Promise.resolve()
-        //   })
-        // })
-        // ->Promise.catch(error => {
-        //   Js.log(error)
-        // setSnackbar(_ => Some(<>
-        //   <p> {React.string("Permission denied")} </p>
-        //   <button type_="button" onClick={_event => setSnackbar(_ => None)}>
-        //     {React.string("Dismiss")}
-        //   </button>
-        // </>))
-        //   Promise.resolve()
-        // })
+        | Create =>
+          Utils.window["fetch"](.
+            "https://us-central1-kokorugs-customer-photos.cloudfunctions.net/createQuickbooksCustomer",
+            {
+              "method": "POST",
+              "headers": {
+                "content-type": "application/json",
+              },
+              "body": Utils.window["JSON"]["stringify"](. {
+                "name": state.name,
+                "phone": state.phone,
+                "mobile": state.mobile,
+                "email": state.email,
+                "address": state.address,
+              }),
+            },
+          )["then"](.response => response["text"](.))["then"](.id => {
+            setSnackbar(_ => Some(<>
+              <p> {React.string("Customer successfully updated.")} </p>
+              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                {React.string("Dismiss")}
+              </button>
+            </>))
+
+            open Firebase.Firestore
+
+            addDoc(
+              collection(db, "activity"),
+              (
+                {
+                  date: Js.Date.make()->Js.Date.toISOString,
+                  user: user["displayName"],
+                  event: #CustomerCreated,
+                  link: `/customers/${id}/edit`,
+                  meta: [state.name],
+                }: Types.activity
+              ),
+            )
+            ->Promise.then(_ => {
+              Utils.location["href"] = `/customers/${id}/view`
+              Promise.resolve()
+            })
+            ->ignore
+          })["catch"](._error => {
+            setState(_ => initialState)
+            setSnackbar(_ => Some(<>
+              <p> {React.string("A problem occurred.")} </p>
+              <button type_="button" onClick={_event => setSnackbar(_ => None)}>
+                {React.string("Dismiss")}
+              </button>
+            </>))
+          })
         | Edit(customerRef) =>
           switch find(~customers, ~customerRef) {
           | None => ()
           | Some((_, customer)) =>
-            Js.log(customer.syncToken)
-
             Utils.window["fetch"](.
-              "http://localhost:8084/kokorugs-customer-photos/us-central1/updateQuickbooksCustomer",
+              "https://us-central1-kokorugs-customer-photos.cloudfunctions.net/updateQuickbooksCustomer",
               {
                 "method": "POST",
+                "headers": {
+                  "content-type": "application/json",
+                },
                 "body": Utils.window["JSON"]["stringify"](. {
                   "id": customerRef,
                   "syncToken": customer.syncToken,
                   "name": state.name,
-                  "mobile": state.mobile,
                   "phone": state.phone,
+                  "mobile": state.mobile,
+                  "email": state.email,
                   "address": state.address,
                 }),
               },
@@ -295,6 +276,21 @@ let make = (~name="", ~mode=Create) => {
                   {React.string("Dismiss")}
                 </button>
               </>))
+
+              open Firebase.Firestore
+
+              addDoc(
+                collection(db, "activity"),
+                (
+                  {
+                    date: Js.Date.make()->Js.Date.toISOString,
+                    user: user["displayName"],
+                    event: #CustomerUpdated,
+                    link: `/customers/${customerRef}/edit`,
+                    meta: [state.name],
+                  }: Types.activity
+                ),
+              )->ignore
             })["catch"](._error =>
               setSnackbar(_ => Some(<>
                 <p> {React.string("A problem occurred.")} </p>
@@ -307,11 +303,11 @@ let make = (~name="", ~mode=Create) => {
         }->ignore
       }}>
       <Styled.Form.Label>
-        <strong> {React.string("Name")} </strong>
+        <strong> {React.string("Name*")} </strong>
         <input type_="text" name="name" onChange=handleChange value=state.name required=true />
       </Styled.Form.Label>
       <Styled.Form.Label>
-        <strong> {React.string("Phone")} </strong>
+        <strong> {React.string("Phone*")} </strong>
         <input type_="text" name="phone" onChange=handleChange value=state.phone required=true />
       </Styled.Form.Label>
       <Styled.Form.Label>
@@ -323,7 +319,7 @@ let make = (~name="", ~mode=Create) => {
         <input type_="text" name="email" onChange=handleChange value=state.email />
       </Styled.Form.Label>
       <Styled.Form.Label>
-        <strong> {React.string("Address")} </strong>
+        <strong> {React.string("Address*")} </strong>
         <input
           type_="text"
           name="street"

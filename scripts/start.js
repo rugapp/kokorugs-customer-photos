@@ -13,7 +13,7 @@ function build() {
 function serve() {
   process.spawn(
     "firebase",
-    ["emulators:start", "--only", "hosting,storage,functions"],
+    ["emulators:start", "--only", "hosting,functions"],
     { stdio: "inherit" }
   );
 }

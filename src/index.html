@@ -125,6 +125,43 @@
         }
       }
     </style>
+    <style>
+      #root.spinner header,
+      #root.spinner main {
+        opacity: 0.3;
+      }
+
+      #root.spinner i.spinner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: inline-block;
+        width: 80px;
+        height: 80px;
+        margin: auto;
+      }
+      #root.spinner i.spinner:after {
+        content: " ";
+        display: block;
+        width: 64px;
+        height: 64px;
+        margin: 8px;
+        border-radius: 50%;
+        border: 6px solid black;
+        border-color: black transparent black transparent;
+        animation: spinner 1.2s linear infinite;
+      }
+      @keyframes spinner {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

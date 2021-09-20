@@ -41,3 +41,17 @@ module User = {
     }
   }
 }
+
+module Loading = {
+  let setIsLoading: (bool => bool) => unit = _ => ()
+  let context = React.createContext(setIsLoading)
+
+  module Provider = {
+    let provider = React.Context.provider(context)
+
+    @react.component
+    let make = (~value, ~children) => {
+      React.createElement(provider, {"value": value, "children": children})
+    }
+  }
+}

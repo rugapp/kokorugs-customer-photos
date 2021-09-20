@@ -194,38 +194,85 @@ function formatCustomer(customer) {
 }
 
 /**
+ * Endpoint for creating Quickbooks Online customers.
+ */
+exports.createQuickbooksCustomer = functions.https.onRequest(
+  async (request, response) => {
+    response.set("Access-Control-Allow-Origin", "*");
+    response.set("Access-Control-Allow-Headers", "Content-Type");
+    response.set("Access-Control-Allow-Methods", "OPTIONS, POST");
+
+    if (request.method === "OPTIONS") {
+      return response.sendStatus(200);
+    }
+
+    try {
+      const {
+        Customer: { Id: id },
+      } = await qboRequest({
+        path: `/v3/company/${COMPANY_ID}/customer/?minorversion=62`,
+        data: JSON.stringify({
+          sparse: true,
+          DisplayName: request.body.name,
+          PrintOnCheckName: request.body.name,
+          PrimaryPhone: { FreeFormNumber: request.body.phone },
+          Mobile: { FreeFormNumber: request.body.mobile },
+          PrimaryEmailAddr: { Address: request.body.email },
+          BillAddr: {
+            Line1: request.body.address.billing.street,
+            Line2: request.body.address.billing.suite,
+            City: request.body.address.billing.city,
+            CountrySubDivisionCode: request.body.address.billing.state,
+            PostalCode: request.body.address.billing.zip,
+          },
+        }),
+      });
+
+      response.send(id);
+    } catch (error) {
+      functions.logger.log("Error updating customer:", request.body);
+      response.sendStatus(500);
+    }
+  }
+);
+
+/**
  * Endpoint for updating Quickbooks Online customers.
  */
 exports.updateQuickbooksCustomer = functions.https.onRequest(
   async (request, response) => {
-    const payload = JSON.parse(request.body);
-    console.log(payload);
     response.set("Access-Control-Allow-Origin", "*");
+    response.set("Access-Control-Allow-Headers", "Content-Type");
     response.set("Access-Control-Allow-Methods", "OPTIONS, POST");
+
+    if (request.method === "OPTIONS") {
+      return response.sendStatus(200);
+    }
+
     try {
       await qboRequest({
         path: `/v3/company/${COMPANY_ID}/customer/?minorversion=62`,
         data: JSON.stringify({
           sparse: true,
-          Id: payload.id,
-          SyncToken: payload.syncToken,
-          DisplayName: payload.name,
-          PrintOnCheckName: payload.name,
-          Mobile: { FreeFormNumber: payload.mobile },
-          PrimaryPhone: { FreeFormNumber: payload.phone },
+          Id: request.body.id,
+          SyncToken: request.body.syncToken,
+          DisplayName: request.body.name,
+          PrintOnCheckName: request.body.name,
+          PrimaryPhone: { FreeFormNumber: request.body.phone },
+          Mobile: { FreeFormNumber: request.body.mobile },
+          PrimaryEmailAddr: { Address: request.body.email },
           BillAddr: {
-            Line1: payload.address.billing.street,
-            Line2: payload.address.billing.suite,
-            City: payload.address.billing.city,
-            CountrySubDivisionCode: payload.address.billing.state,
-            PostalCode: payload.address.billing.zip,
+            Line1: request.body.address.billing.street,
+            Line2: request.body.address.billing.suite,
+            City: request.body.address.billing.city,
+            CountrySubDivisionCode: request.body.address.billing.state,
+            PostalCode: request.body.address.billing.zip,
           },
         }),
       });
 
       response.sendStatus(200);
     } catch (error) {
-      console.log(error);
       functions.logger.log("Error updating customer:", request.body);
       response.sendStatus(500);
     }
